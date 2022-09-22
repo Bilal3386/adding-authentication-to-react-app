@@ -1,12 +1,13 @@
-import { useState, useRef } from "react";
-
+import { useState, useRef, useContext } from "react";
+import AuthContext from "../../store/auth-context";
 import classes from "./AuthForm.module.css";
 
 const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [isLoader, setIsLoader] = useState(false)
+  const [isLoader, setIsLoader] = useState(false);
   const emailInputRef = useRef();
   const passwordInputRef = useRef();
+  const authCtx = useContext(AuthContext)
 
   const switchAuthModeHandler = () => {
     setIsLogin((prevState) => !prevState);
@@ -18,58 +19,43 @@ const AuthForm = () => {
     const enteredPassword = passwordInputRef.current.value;
 
     // optional: Add validation here
-    setIsLoader(true)
+    setIsLoader(true);
+    let url;
     if (isLogin) {
-      fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDlFTs44FMavcOEn87pLCRzq-7wWaU8FGE',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          email: enteredEmail,
-          password: enteredPassword,
-          returnSecureToken: true,
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-      ).then(res => {
-        if(res.ok)
-        {
-          console.log(res)
-          setIsLoader(false)
-        }else{
-          res.json().then(data => {
-            setIsLoader(false)
-            alert(data.error.message)
-          })
+      url =
+        "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDlFTs44FMavcOEn87pLCRzq-7wWaU8FGE";
+    } else {
+      url =
+        "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyDlFTs44FMavcOEn87pLCRzq-7wWaU8FGE";
+    }
+    fetch(url, {
+      method: "POST",
+      body: JSON.stringify({
+        email: enteredEmail,
+        password: enteredPassword,
+        returnSecureToken: true,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => {
+        setIsLoader(false);
+        if (res.ok) {
+          return res.json();
+        } else {
+          return res.json().then((data) => {
+            throw new Error(data.error.message);
+          });
         }
       })
-    } else {
-      fetch(
-        "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyDlFTs44FMavcOEn87pLCRzq-7wWaU8FGE",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            email: enteredEmail,
-            password: enteredPassword,
-            returnSecureToken: true,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      ).then(res => {
-        if(res.ok)
-        {
-          setIsLoader(false)
-        }else {
-          return res.json().then(data=> {
-            setIsLoader(false)
-            alert(data.error.message)
-          })
-        }
+      .then((data) => {
+        //console.log(data.idToken);
+        authCtx.login(data.idToken)
+      })
+      .catch((error) => {
+        alert(error);
       });
-    }
   };
 
   return (
@@ -90,7 +76,8 @@ const AuthForm = () => {
           />
         </div>
         <div className={classes.actions}>
-          {isLoader ? 'Sending request...': <button>{isLogin ? "Login" : "Create Account"}</button>}
+          {!isLoader && <button>{isLogin ? "Login" : "Create Account"}</button>}
+          {isLoader && <p>Sending request...</p>}
           <button
             type="button"
             className={classes.toggle}
