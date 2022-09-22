@@ -14,13 +14,36 @@ const AuthForm = () => {
 
   const submitHandler = (event) => {
     event.preventDefault();
-
     const enteredEmail = emailInputRef.current.value;
     const enteredPassword = passwordInputRef.current.value;
 
     // optional: Add validation here
     setIsLoader(true)
     if (isLogin) {
+      fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDlFTs44FMavcOEn87pLCRzq-7wWaU8FGE',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          email: enteredEmail,
+          password: enteredPassword,
+          returnSecureToken: true,
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+      ).then(res => {
+        if(res.ok)
+        {
+          console.log(res)
+          setIsLoader(false)
+        }else{
+          res.json().then(data => {
+            setIsLoader(false)
+            alert(data.error.message)
+          })
+        }
+      })
     } else {
       fetch(
         "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyDlFTs44FMavcOEn87pLCRzq-7wWaU8FGE",
